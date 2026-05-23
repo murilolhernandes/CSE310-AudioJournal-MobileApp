@@ -15,12 +15,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.murilo.audiojournal.ui.theme.AudioJournalTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 // import androidx.compose.foundation.layout.Row
 
@@ -29,7 +35,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // Text(value = "AudioJournal APP")
             MainScreen()
 
         }
@@ -40,9 +45,16 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     Column(
         modifier = Modifier.fillMaxSize()
-            .systemBarsPadding(),
+            .background(Color(0xFF1D1D1D)),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Status Bar Background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF4F4F4F))
+                .statusBarsPadding()
+        )
         AudioJournalScreen()
     }
 }
@@ -50,13 +62,13 @@ fun MainScreen() {
 @Composable
 fun AudioJournalScreen() {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize()
+            .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Greeting(modifier = Modifier.align(Alignment.Start))
-        Text(text = "00:00:00") // Temporary timer
-
-        RecordButton()
+        Greeting()
+        Spacer(modifier = Modifier.height(30.dp))
+        RecordingContainer(modifier = Modifier.padding(horizontal = 20.dp))
     }
 }
 
@@ -69,11 +81,38 @@ fun Greeting(modifier: Modifier = Modifier) {
         color = Color.White,
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.DarkGray)
+            .background(Color(0xFF424B54))
             .padding(
-            start = 24.dp,
-            top = 16.dp,
-            bottom = 32.dp
-        )
+                start = 24.dp,
+                top = 28.dp,
+                bottom = 28.dp
+            )
     )
+}
+
+@Composable
+fun RecordingContainer(modifier: Modifier = Modifier) {
+    val containerShape = RoundedCornerShape(12.dp)
+    Column(
+        modifier
+            .background(Color(0xFF4F4F4F), shape = containerShape)
+            .clip(containerShape),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "00:00:00",
+            color = Color.White,
+            fontSize = 60.sp,
+            modifier = Modifier.padding(vertical = 32.dp)
+        )
+        Box(
+            modifier = Modifier
+                //.fillMaxWidth()
+                .background(Color(0xFF252525))
+                .padding(vertical = 32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            RecordButton()
+        }
+    }
 }
