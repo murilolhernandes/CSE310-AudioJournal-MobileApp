@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -23,12 +24,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -68,8 +80,14 @@ fun AudioJournalScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Greeting()
+
         Spacer(modifier = Modifier.height(30.dp))
+
         RecordingContainer(modifier = Modifier.padding(horizontal = 20.dp))
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        AudioLogs()
     }
 }
 
@@ -145,3 +163,58 @@ fun RecordingTimer(timeInSeconds: Int) {
         modifier = Modifier.padding(vertical = 32.dp)
     )
 }
+
+@Composable
+fun AudioListItem(record: AudioRecord) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .background(Color(0xFF4F4F4F), shape = RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = record.fileName, color = Color.White, fontWeight = Bold, fontSize = 20.sp)
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Text(text = record.duration, color = Color.LightGray, fontSize = 20.sp)
+        }
+        IconButton(
+            onClick = {},
+            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White),
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Play Audio Log Icon",
+                modifier = Modifier.size(30.dp),
+                tint = Color.DarkGray
+            )
+        }
+    }
+}
+
+@Composable
+fun AudioLogs() {
+    val containerShape = RoundedCornerShape(12.dp)
+
+    val dummyRecordings = listOf(
+        AudioRecord("Journal_Entry_1.mp3", "00:03:12", "May 20, 2026"),
+        AudioRecord("Journal_Entry_2.mp3", "00:01:45", "May 21, 2026"),
+        AudioRecord("Journal_Entry_3.mp3", "00:00:30", "May 22, 2026")
+    )
+    LazyColumn() {
+        items(dummyRecordings) { record ->
+            AudioListItem(record = record)
+        }
+    }
+}
+
+data class AudioRecord(
+    val fileName: String,
+    val duration: String,
+    val date: String
+)
