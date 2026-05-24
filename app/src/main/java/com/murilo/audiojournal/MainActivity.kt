@@ -40,8 +40,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
+import com.murilo.audiojournal.ui.JournalRecorder
 import kotlinx.coroutines.delay
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,6 +114,8 @@ fun Greeting(modifier: Modifier = Modifier) {
 
 @Composable
 fun RecordingContainer(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val audioRecorder = remember { JournalRecorder(context) }
     val containerShape = RoundedCornerShape(12.dp)
     var isRecording by remember { mutableStateOf(false) }
     var timeInSeconds by remember { mutableStateOf(0) }
@@ -139,8 +144,16 @@ fun RecordingContainer(modifier: Modifier = Modifier) {
         ) {
             RecordControls(
                 isRecording = isRecording,
-                onRecordStart = { isRecording = true },
+                onRecordStart = {
+                    val fileName = "Journal_${System.currentTimeMillis()}.mp4"
+                    val outputFile = File(context.cacheDir, fileName)
+
+                    audioRecorder.start(outputFile)
+
+                    isRecording = true
+                },
                 onStopClick = {
+                    audioRecorder.stop()
                     isRecording = false
                     timeInSeconds = 0
                 }
