@@ -1,27 +1,46 @@
 package com.murilo.audiojournal
 
-import androidx.compose.foundation.background
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Gray
+import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
 
 @Composable
-fun RecordButton() {
+fun RecordControls(
+    isRecording: Boolean,
+    onRecordStart: () -> Unit,
+    onStopClick: () -> Unit
+    ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -30,24 +49,87 @@ fun RecordButton() {
             contentAlignment = Alignment.Center
 
         ) {
-            Row(
-                modifier = Modifier.padding(20.dp)
-                    // .background(Color(0xFF4F4F4F))
-            ) {
-                Button(
-                    onClick = { /* API logic here */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                ) {
-                    Text(text = "RECORD")
-                }
-                Spacer(modifier = Modifier.width(30.dp))
-                Button(
-                    onClick = { /* API logic here */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                ) {
-                    Text(text = "STOP")
-                }
+            Row() {
+                RecordButton(
+                    isRecording = isRecording,
+                    onRecordStart = onRecordStart
+                )
+                Spacer(modifier = Modifier.width(80.dp))
+
+                StopButton(
+                    onStopClick = onStopClick
+                )
             }
         }
+    }
+}
+
+@Composable
+fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
+    val context = LocalContext.current
+
+    val permissionLaucher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                Toast.makeText(context, "Microphone Permission Granted!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "We need the mic to record audio!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IconButton(
+            onClick = {
+                permissionLaucher.launch(Manifest.permission.RECORD_AUDIO)
+                onRecordStart()
+            },
+            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Red),
+            modifier = Modifier.size(80.dp)
+        ) {
+           Icon(
+               imageVector = Icons.Default.Mic,
+               contentDescription = "Microphone Icon",
+               modifier = Modifier.size(40.dp),
+               tint = Color.White
+           )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "RECORD",
+            fontWeight = FontWeight.Bold,
+            color = Red,
+            fontSize = 20.sp
+        )
+    }
+}
+
+@Composable
+fun StopButton(onStopClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IconButton(
+            onClick = { onStopClick() },
+            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Gray),
+            modifier = Modifier.size(80.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Stop,
+                contentDescription = "Stop Icon",
+                modifier = Modifier.size(40.dp),
+                tint = Color.White
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "STOP",
+            fontWeight = FontWeight.Bold,
+            color = Gray,
+            fontSize = 20.sp
+        )
     }
 }

@@ -7,13 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.murilo.audiojournal.ui.theme.AudioJournalTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,8 +24,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
-
-// import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,26 +94,54 @@ fun Greeting(modifier: Modifier = Modifier) {
 @Composable
 fun RecordingContainer(modifier: Modifier = Modifier) {
     val containerShape = RoundedCornerShape(12.dp)
+    var isRecording by remember { mutableStateOf(false) }
+    var timeInSeconds by remember { mutableStateOf(0) }
+
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            while (true) {
+                delay(1000L)
+                timeInSeconds += 1
+            }
+        }
+    }
+
     Column(
         modifier
             .background(Color(0xFF4F4F4F), shape = containerShape)
             .clip(containerShape),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "00:00:00",
-            color = Color.White,
-            fontSize = 60.sp,
-            modifier = Modifier.padding(vertical = 32.dp)
-        )
+        RecordingTimer(timeInSeconds = timeInSeconds)
         Box(
             modifier = Modifier
-                //.fillMaxWidth()
                 .background(Color(0xFF252525))
                 .padding(vertical = 32.dp),
             contentAlignment = Alignment.Center
         ) {
-            RecordButton()
+            RecordControls(
+                isRecording = isRecording,
+                onRecordStart = { isRecording = true },
+                onStopClick = {
+                    isRecording = false
+                    timeInSeconds = 0
+                }
+            )
         }
     }
+}
+
+@Composable
+fun RecordingTimer(timeInSeconds: Int) {
+    val hours = timeInSeconds / 3600
+    val minutes = (timeInSeconds % 3600) / 60
+    val seconds = timeInSeconds % 60
+    val formattedTime = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+    Text(
+        text = formattedTime,
+        color = Color.White,
+        fontSize = 70.sp,
+        modifier = Modifier.padding(vertical = 32.dp)
+    )
 }
