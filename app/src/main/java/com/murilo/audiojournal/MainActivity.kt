@@ -1,5 +1,7 @@
 package com.murilo.audiojournal
 
+import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -45,6 +47,9 @@ import androidx.compose.ui.text.font.FontWeight.Companion.Bold
 import com.murilo.audiojournal.ui.JournalRecorder
 import kotlinx.coroutines.delay
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +82,8 @@ fun MainScreen() {
 
 @Composable
 fun AudioJournalScreen() {
+    var isRecording by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxSize()
             .navigationBarsPadding(),
@@ -86,11 +93,14 @@ fun AudioJournalScreen() {
 
         Spacer(modifier = Modifier.height(30.dp))
 
-        RecordingContainer(modifier = Modifier.padding(horizontal = 20.dp))
+        RecordingContainer(
+            isRecording = isRecording,
+            onRecordingChange = { isRecording = it },
+            modifier = Modifier.padding(horizontal = 20.dp))
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        AudioLogs()
+        AudioLogs(isRecording = isRecording)
     }
 }
 
@@ -113,18 +123,22 @@ fun Greeting(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun RecordingContainer(modifier: Modifier = Modifier) {
+fun RecordingContainer(
+    isRecording: Boolean,
+    onRecordingChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val audioRecorder = remember { JournalRecorder(context) }
     val containerShape = RoundedCornerShape(12.dp)
-    var isRecording by remember { mutableStateOf(false) }
-    var timeInSeconds by remember { mutableStateOf(0) }
+    var timeInMillis by remember { mutableStateOf(0L) }
 
     LaunchedEffect(isRecording) {
         if (isRecording) {
+            val startTime = System.currentTimeMillis() - timeInMillis
             while (true) {
-                delay(1000L)
-                timeInSeconds += 1
+                timeInMillis = System.currentTimeMillis() - startTime
+                delay(30L)
             }
         }
     }
@@ -135,7 +149,7 @@ fun RecordingContainer(modifier: Modifier = Modifier) {
             .clip(containerShape),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        RecordingTimer(timeInSeconds = timeInSeconds)
+        RecordingTimer(timeInMillis = timeInMillis)
         Box(
             modifier = Modifier
                 .background(Color(0xFF252525))
@@ -150,12 +164,12 @@ fun RecordingContainer(modifier: Modifier = Modifier) {
 
                     audioRecorder.start(outputFile)
 
-                    isRecording = true
+                    onRecordingChange(true)
                 },
                 onStopClick = {
                     audioRecorder.stop()
-                    isRecording = false
-                    timeInSeconds = 0
+                    onRecordingChange(false)
+                    timeInMillis = 0L
                 }
             )
         }
@@ -163,11 +177,12 @@ fun RecordingContainer(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun RecordingTimer(timeInSeconds: Int) {
-    val hours = timeInSeconds / 3600
-    val minutes = (timeInSeconds % 3600) / 60
-    val seconds = timeInSeconds % 60
-    val formattedTime = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+fun RecordingTimer(timeInMillis: Long) {
+    val hours = timeInMillis / 3600
+    val minutes = (timeInMillis / 1000) / 60
+    val seconds = (timeInMillis / 1000) % 60
+    val milliSeconds = (timeInMillis % 1000) / 10
+    val formattedTime = String.format("%02d:%02d:%02d", minutes, seconds, milliSeconds)
 
     Text(
         text = formattedTime,
@@ -211,23 +226,79 @@ fun AudioListItem(record: AudioRecord) {
 }
 
 @Composable
-fun AudioLogs() {
+fun AudioLogs(isRecording: Boolean) {
     val containerShape = RoundedCornerShape(12.dp)
+    var recordings by remember { mutableStateOf(emptyList<AudioRecord>()) }
+    val context = LocalContext.current
 
-    val dummyRecordings = listOf(
-        AudioRecord("Journal_Entry_1.mp3", "00:03:12", "May 20, 2026"),
-        AudioRecord("Journal_Entry_2.mp3", "00:01:45", "May 21, 2026"),
-        AudioRecord("Journal_Entry_3.mp3", "00:00:30", "May 22, 2026")
-    )
-    LazyColumn() {
-        items(dummyRecordings) { record ->
-            AudioListItem(record = record)
+    LaunchedEffect(isRecording) {
+        if (!isRecording) {
+            recordings = fetchRecordings(context)
         }
     }
+
+    if (recordings.isEmpty()) {
+        Text(text = "Your Audio Log is currently empty...", color = Color.White, fontSize = 20.sp)
+    } else {
+        LazyColumn() {
+            items(recordings) { record ->
+                AudioListItem(record = record)
+            }
+        }
+    }
+}
+
+fun fetchRecordings(context: Context): List<AudioRecord> {
+    val directory = context.cacheDir
+    val files = directory.listFiles()?.filter { it.extension == "mp4" } ?: emptyList()
+    val sortedFiles = files.sortedBy { it.lastModified() }
+
+    val retriever = MediaMetadataRetriever()
+
+    val records = sortedFiles.map { file ->
+        val dateString = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(file.lastModified()))
+
+        var formattedDuration = "--:--:--"
+
+        try {
+            retriever.setDataSource(file.absolutePath)
+
+            val durationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val timeInMillis = durationString?.toLong() ?: 0L
+
+            val hours = (timeInMillis / (1000 * 60 * 60)).toInt()
+            val minutes = (timeInMillis % (1000 * 60 * 60) / (1000 * 60)).toInt()
+            val seconds = (timeInMillis % (1000 * 60) / 1000).toInt()
+
+            formattedDuration = if (hours > 0) {
+                String.format("%02d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+        } catch (e: Exception) {
+
+        }
+
+        AudioRecord(
+            fileName = file.name,
+            duration = formattedDuration,
+            date = dateString,
+            file = file
+        )
+    }
+
+    try {
+        retriever.release()
+    } catch (e: Exception) {
+
+    }
+
+    return records
 }
 
 data class AudioRecord(
     val fileName: String,
     val duration: String,
-    val date: String
+    val date: String,
+    val file: File
 )

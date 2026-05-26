@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
 
@@ -81,28 +82,33 @@ fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(120.dp)
     ) {
         IconButton(
             onClick = {
                 permissionLaucher.launch(Manifest.permission.RECORD_AUDIO)
                 onRecordStart()
             },
-            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Red),
+            enabled = !isRecording,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = Color.Red,
+                disabledContentColor = Color(0xFF552222)),
             modifier = Modifier.size(80.dp)
         ) {
            Icon(
                imageVector = Icons.Default.Mic,
                contentDescription = "Microphone Icon",
                modifier = Modifier.size(40.dp),
-               tint = Color.White
+               tint = if (isRecording) Color.Gray else Color.White
            )
         }
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "RECORD",
+            text = if (isRecording) "RECORDING" else "RECORD",
             fontWeight = FontWeight.Bold,
-            color = Red,
-            fontSize = 20.sp
+            color = Color.Red,
+            fontSize = 20.sp,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -111,6 +117,7 @@ fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
 fun StopButton(onStopClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(120.dp)
     ) {
         IconButton(
             onClick = { onStopClick() },
