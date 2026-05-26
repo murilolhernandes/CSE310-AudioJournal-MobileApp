@@ -1,4 +1,4 @@
-package com.murilo.audiojournal.ui
+package com.murilo.audiojournal
 
 import android.content.Context
 import android.media.MediaRecorder
@@ -13,7 +13,7 @@ class JournalRecorder(private val context: Context) {
             MediaRecorder(context)
         } else {
             @Suppress("DEPRECATION")
-            MediaRecorder()
+            (MediaRecorder())
         }
 
         recorder?.apply {

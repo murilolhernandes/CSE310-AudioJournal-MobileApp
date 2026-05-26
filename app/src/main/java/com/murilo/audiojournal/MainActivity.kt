@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -44,7 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
-import com.murilo.audiojournal.ui.JournalRecorder
+import com.murilo.audiojournal.JournalRecorder
 import kotlinx.coroutines.delay
 import java.io.File
 import java.text.SimpleDateFormat
@@ -84,6 +85,11 @@ fun MainScreen() {
 fun AudioJournalScreen() {
     var isRecording by remember { mutableStateOf(false) }
 
+    var currentlyPlayingFile by remember { mutableStateOf<File?>(null) }
+
+    val context = LocalContext.current
+    val audioPlayer = remember { JournalPlayer(context) }
+
     Column(
         modifier = Modifier.fillMaxSize()
             .navigationBarsPadding(),
@@ -95,12 +101,35 @@ fun AudioJournalScreen() {
 
         RecordingContainer(
             isRecording = isRecording,
-            onRecordingChange = { isRecording = it },
-            modifier = Modifier.padding(horizontal = 20.dp))
+            onRecordingChange = {
+                isRecording = it
+                if (it) {
+                    audioPlayer.stop()
+                    currentlyPlayingFile = null
+                }
+            },
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        AudioLogs(isRecording = isRecording)
+        AudioLogs(
+            isRecording = isRecording,
+            currentlyPlayingFile = currentlyPlayingFile,
+            onPlayClick = { fileToPlay ->
+                currentlyPlayingFile = fileToPlay
+                audioPlayer.playFile(
+                    file = fileToPlay,
+                    onPlaybackComplete = {
+                        currentlyPlayingFile = null
+                    }
+                )
+            },
+            onStopClick = {
+                audioPlayer.stop()
+                currentlyPlayingFile = null
+            }
+        )
     }
 }
 
@@ -193,7 +222,12 @@ fun RecordingTimer(timeInMillis: Long) {
 }
 
 @Composable
-fun AudioListItem(record: AudioRecord) {
+fun AudioListItem(
+    record: AudioRecord,
+    isPlaying: Boolean,
+    onPlayClick: () -> Unit,
+    onStopClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -211,13 +245,15 @@ fun AudioListItem(record: AudioRecord) {
             Text(text = record.duration, color = Color.LightGray, fontSize = 20.sp)
         }
         IconButton(
-            onClick = {},
+            onClick = {
+                if (isPlaying) onStopClick() else onPlayClick()
+            },
             colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White),
             modifier = Modifier.size(40.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Play Audio Log Icon",
+                imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Stop Audio" else "Play Audio",
                 modifier = Modifier.size(30.dp),
                 tint = Color.DarkGray
             )
@@ -226,7 +262,12 @@ fun AudioListItem(record: AudioRecord) {
 }
 
 @Composable
-fun AudioLogs(isRecording: Boolean) {
+fun AudioLogs(
+    isRecording: Boolean,
+    currentlyPlayingFile: File?,
+    onPlayClick: (File) -> Unit,
+    onStopClick: () -> Unit
+) {
     val containerShape = RoundedCornerShape(12.dp)
     var recordings by remember { mutableStateOf(emptyList<AudioRecord>()) }
     val context = LocalContext.current
@@ -242,7 +283,13 @@ fun AudioLogs(isRecording: Boolean) {
     } else {
         LazyColumn() {
             items(recordings) { record ->
-                AudioListItem(record = record)
+                AudioListItem(
+                    record = record,
+                    isPlaying = currentlyPlayingFile === record.file,
+                    onPlayClick = { onPlayClick(record.file) },
+                    onStopClick = onStopClick
+
+                )
             }
         }
     }
