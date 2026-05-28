@@ -56,6 +56,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -233,37 +242,82 @@ fun AudioListItem(
     record: AudioRecord,
     isPlaying: Boolean,
     onPlayClick: () -> Unit,
-    onStopClick: () -> Unit
+    onStopClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    Row(
+    val density = LocalDensity.current
+    val maxRevealPx = remember { with(density) { 80.dp.toPx() } }
+    var dragOffset by remember { mutableStateOf(0f) }
+    val animatedOffset by animateFloatAsState(
+        targetValue = dragOffset,
+        label = "swip_reveal_anim"
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp)
-            .background(Color(0xFF4F4F4F), shape = RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = record.fileName, color = Color.White, fontWeight = Bold, fontSize = 20.sp)
-
-            Spacer(modifier = Modifier.height(5.dp))
-
-            Text(text = record.duration, color = Color.LightGray, fontSize = 20.sp)
-        }
-        IconButton(
-            onClick = {
-                if (isPlaying) onStopClick() else onPlayClick()
-            },
-            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White),
-            modifier = Modifier.size(40.dp)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(Color(0xFFD32F2F), shape = RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.CenterEnd
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Stop Audio" else "Play Audio",
-                modifier = Modifier.size(30.dp),
-                tint = Color.DarkGray
-            )
+            IconButton(
+                onClick = {
+                    onDelete()
+                    dragOffset = 0f
+                },
+                modifier = Modifier.width(80.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Icon",
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(animatedOffset.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            dragOffset = if (dragOffset < -maxRevealPx / 2) -maxRevealPx else 0f
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            dragOffset = (dragOffset + dragAmount).coerceIn(-maxRevealPx, 0f)
+                        }
+                    )
+                }
+                .background(Color(0xFF4F4F4F), shape = RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = record.fileName, color = Color.White, fontWeight = Bold, fontSize = 20.sp)
+                Spacer(modifier = Modifier.height(5.dp))
+                Text(text = record.duration, color = Color.LightGray, fontSize = 20.sp)
+            }
+            IconButton(
+                onClick = {
+                    if (isPlaying) onStopClick() else onPlayClick()
+                },
+                colors = IconButtonDefaults.iconButtonColors(containerColor = Color.White),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Stop Audio" else "Play Audio",
+                    modifier = Modifier.size(30.dp),
+                    tint = Color.DarkGray
+                )
+            }
         }
     }
 }
@@ -278,8 +332,9 @@ fun AudioLogs(
 ) {
     var recordings by remember { mutableStateOf(emptyList<AudioRecord>()) }
     val context = LocalContext.current
-
     val listState = rememberLazyListState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var recordToDelete by remember { mutableStateOf<AudioRecord?>(null) }
 
     LaunchedEffect(isRecording) {
         if (!isRecording) {
@@ -291,14 +346,16 @@ fun AudioLogs(
         Text(text = "Your Audio Log is currently empty...", color = Color.White, fontSize = 20.sp)
     } else {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         ) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(recordings) { record ->
+                items(
+                    items = recordings,
+                    key = { record -> record.file.absolutePath }
+                ) { record ->
                     AudioListItem(
                         record = record,
                         isPlaying = currentlyPlayingFile === record.file,
@@ -310,7 +367,18 @@ fun AudioLogs(
                                 recordings = fetchRecordings(context)
                             }
                         },
-                        onStopClick = onStopClick
+                        onStopClick = onStopClick,
+                        onDelete = {
+                            //if (currentlyPlayingFile == record.file) {
+                              //  onStopClick()
+                            //}
+                            recordToDelete = record
+                            showDeleteDialog = true
+
+                            //record.file.delete()
+
+                            //recordings = fetchRecordings(context)
+                        }
 
                     )
                 }
@@ -364,9 +432,6 @@ fun AudioLogs(
                         targetValue = targetYOffset,
                         label = "scrollbar_position_anim"
                     )
-                    //val totalItems = layoutInfo.totalItemsCount.toFloat()
-                    //val visibleItems = layoutInfo.visibleItemsInfo.size.toFloat()
-                    //val heightRatio = if (totalItems > 0) visibleItems / totalItems else 1f
 
                     Box(
                         modifier = Modifier
@@ -378,7 +443,54 @@ fun AudioLogs(
                 }
             }
         }
+        if (showDeleteDialog && recordToDelete != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    recordToDelete = null
+                },
+                containerColor = Color(0xFF333333),
+                title = {
+                    Text(text = "Delete Recording", color = Color.White, fontWeight = Bold)
+                },
+                text = {
+                    Text(
+                        text = "Are you sure you want to permanently delete '${recordToDelete?.fileName}'?",
+                        color = Color.LightGray,
+                        fontSize = 16.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val record = recordToDelete!!
 
+                            if (currentlyPlayingFile == record.file) {
+                                onStopClick()
+                            }
+
+                            record.file.delete()
+                            recordings = fetchRecordings(context)
+
+                            showDeleteDialog = false
+                            recordToDelete = null
+                        }
+                    ) {
+                        Text("Delete", color = Color.Red, fontWeight = Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            recordToDelete = null
+                        }
+                    ) {
+                        Text("Cancel", color = Color.White)
+                    }
+                }
+            )
+        }
     }
 }
 
