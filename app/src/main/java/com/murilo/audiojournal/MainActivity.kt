@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -51,6 +52,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.animation.core.animateDpAsState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -128,7 +135,8 @@ fun AudioJournalScreen() {
             onStopClick = {
                 audioPlayer.stop()
                 currentlyPlayingFile = null
-            }
+            },
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -164,7 +172,8 @@ fun RecordingContainer(
 
     LaunchedEffect(isRecording) {
         if (isRecording) {
-            val startTime = System.currentTimeMillis() - timeInMillis
+            timeInMillis = 0L
+            val startTime = System.currentTimeMillis()
             while (true) {
                 timeInMillis = System.currentTimeMillis() - startTime
                 delay(30L)
@@ -266,11 +275,13 @@ fun AudioLogs(
     isRecording: Boolean,
     currentlyPlayingFile: File?,
     onPlayClick: (File) -> Unit,
-    onStopClick: () -> Unit
+    onStopClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val containerShape = RoundedCornerShape(12.dp)
     var recordings by remember { mutableStateOf(emptyList<AudioRecord>()) }
     val context = LocalContext.current
+
+    val listState = rememberLazyListState()
 
     LaunchedEffect(isRecording) {
         if (!isRecording) {
@@ -281,17 +292,88 @@ fun AudioLogs(
     if (recordings.isEmpty()) {
         Text(text = "Your Audio Log is currently empty...", color = Color.White, fontSize = 20.sp)
     } else {
-        LazyColumn() {
-            items(recordings) { record ->
-                AudioListItem(
-                    record = record,
-                    isPlaying = currentlyPlayingFile === record.file,
-                    onPlayClick = { onPlayClick(record.file) },
-                    onStopClick = onStopClick
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(recordings) { record ->
+                    AudioListItem(
+                        record = record,
+                        isPlaying = currentlyPlayingFile === record.file,
+                        onPlayClick = { onPlayClick(record.file) },
+                        onStopClick = onStopClick
 
-                )
+                    )
+                }
+            }
+
+            val scrollProgress by remember {
+                derivedStateOf {
+                    val layoutInfo = listState.layoutInfo
+                    if (layoutInfo.visibleItemsInfo.isEmpty()) return@derivedStateOf 0f
+                    val firstItem = layoutInfo.visibleItemsInfo.first()
+                    val itemsOnScreen = layoutInfo.viewportSize.height.toFloat() / firstItem.size.toFloat()
+                    val exactPosition = listState.firstVisibleItemIndex.toFloat() +
+                            (listState.firstVisibleItemScrollOffset.toFloat() / firstItem.size.toFloat())
+                    val maxScroll = (layoutInfo.totalItemsCount.toFloat() - itemsOnScreen).coerceAtLeast(0.01f)
+
+                    (exactPosition / maxScroll).coerceIn(0f, 1f)
+                }
+            }
+
+            val showScrollbar by remember {
+                derivedStateOf {
+                    listState.canScrollForward || listState.canScrollBackward
+                }
+            }
+
+            if (showScrollbar) {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 4.dp, top = 8.dp, bottom = 8.dp)
+                        .fillMaxHeight()
+                ) {
+                    val trackHeight = maxHeight
+                    val layoutInfo = listState.layoutInfo
+
+                    val targetThumbHeight = if (layoutInfo.visibleItemsInfo.isNotEmpty()) {
+                        val firstItem = layoutInfo.visibleItemsInfo.first()
+                        val itemsOnScreen = layoutInfo.viewportSize.height.toFloat() / firstItem.size.toFloat()
+                        val heightRatio = (itemsOnScreen / layoutInfo.totalItemsCount.toFloat()).coerceIn(0f, 1f)
+                        (trackHeight * heightRatio).coerceAtLeast(40.dp)
+                    } else {
+                        40.dp
+                    }
+
+                    val animatedThumbHeight by animateDpAsState(
+                        targetValue = targetThumbHeight,
+                        label = "scrollbar_size_anim"
+                    )
+                    val targetYOffset = (trackHeight - animatedThumbHeight) * scrollProgress
+                    val animatedYOffset by animateDpAsState(
+                        targetValue = targetYOffset,
+                        label = "scrollbar_position_anim"
+                    )
+                    //val totalItems = layoutInfo.totalItemsCount.toFloat()
+                    //val visibleItems = layoutInfo.visibleItemsInfo.size.toFloat()
+                    //val heightRatio = if (totalItems > 0) visibleItems / totalItems else 1f
+
+                    Box(
+                        modifier = Modifier
+                            .offset(y = animatedYOffset)
+                            .width(6.dp)
+                            .height(animatedThumbHeight)
+                            .background(Color.Gray, RoundedCornerShape(percent = 50))
+                    )
+                }
             }
         }
+
     }
 }
 
