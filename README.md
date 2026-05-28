@@ -30,7 +30,6 @@ I built this application to deepen my understanding of modern Android developmen
 
 # Future Work
 
-{Make a list of things that you need to fix, improve, and add in the future.}
 * Implement an audio visualizer (moving waveforms) that reacts to the user's voice during recording and playback.
 * Add a feature allowing users to rename their audio files from the default timestamped names.
 * Integrate cloud syncing (such as Firebase) so users can back up their journals across devices.
