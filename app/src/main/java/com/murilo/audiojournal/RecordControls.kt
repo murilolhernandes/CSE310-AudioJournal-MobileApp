@@ -21,20 +21,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Gray
-import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 @Composable
 fun RecordControls(
@@ -69,16 +65,15 @@ fun RecordControls(
 fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
     val context = LocalContext.current
 
-    val permissionLaucher = rememberLauncherForActivityResult(
+    val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                Toast.makeText(context, "Microphone Permission Granted!", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "We need the mic to record audio!", Toast.LENGTH_SHORT).show()
-            }
+    ) { isGranted ->
+        if (isGranted) {
+            onRecordStart()
+        } else {
+            Toast.makeText(context, "Microphone access is required to use the journal.", Toast.LENGTH_LONG).show()
         }
-    )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -86,8 +81,16 @@ fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
     ) {
         IconButton(
             onClick = {
-                permissionLaucher.launch(Manifest.permission.RECORD_AUDIO)
-                onRecordStart()
+                val permissionStatus = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.RECORD_AUDIO
+                )
+
+                if (permissionStatus == PackageManager.PERMISSION_GRANTED) {
+                    onRecordStart()
+                } else {
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
             },
             enabled = !isRecording,
             colors = IconButtonDefaults.iconButtonColors(

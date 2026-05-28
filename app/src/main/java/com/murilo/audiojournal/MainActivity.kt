@@ -3,6 +3,7 @@ package com.murilo.audiojournal
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,10 +44,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
-import com.murilo.audiojournal.JournalRecorder
 import kotlinx.coroutines.delay
 import java.io.File
 import java.text.SimpleDateFormat
@@ -55,7 +54,6 @@ import java.util.Locale
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.animation.core.animateDpAsState
 
@@ -304,7 +302,14 @@ fun AudioLogs(
                     AudioListItem(
                         record = record,
                         isPlaying = currentlyPlayingFile === record.file,
-                        onPlayClick = { onPlayClick(record.file) },
+                        onPlayClick = {
+                            if (record.file.exists()) {
+                                onPlayClick(record.file)
+                            } else {
+                                Toast.makeText(context, "File not found. It may have been deleted.", Toast.LENGTH_SHORT).show()
+                                recordings = fetchRecordings(context)
+                            }
+                        },
                         onStopClick = onStopClick
 
                     )

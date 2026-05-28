@@ -11,12 +11,23 @@ class JournalPlayer(private val context: Context) {
     fun playFile(file: File, onPlaybackComplete: () -> Unit) {
         stop()
 
-        player = MediaPlayer.create(context, file.toUri()).apply {
-            setOnCompletionListener {
-                stop()
-                onPlaybackComplete()
+        try {
+            player = MediaPlayer.create(context, file.toUri())
+
+            if (player == null) {
+                return
             }
-            start()
+
+            player?.apply {
+                setOnCompletionListener {
+                    stop()
+                    onPlaybackComplete()
+                }
+                start()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            stop()
         }
     }
 
