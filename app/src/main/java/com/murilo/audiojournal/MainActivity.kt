@@ -77,6 +77,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * The root composable that sets up the overall application background
+ * and handles safe padding for the device's system status bars.
+ */
 @Composable
 fun MainScreen() {
     Column(
@@ -95,6 +99,11 @@ fun MainScreen() {
     }
 }
 
+/**
+ * The main orchestrator for the AudioJournal app.
+ * This screen hoists and manages the core state for both recording and playback,
+ * passing these states down to the respective UI components.
+ */
 @Composable
 fun AudioJournalScreen() {
     var isRecording by remember { mutableStateOf(false) }
@@ -148,6 +157,10 @@ fun AudioJournalScreen() {
     }
 }
 
+/**
+ * Displays the application's top header/title bar.
+ * @param modifier Modifier to be applied to the greeting layout.
+ */
 @Composable
 fun Greeting(modifier: Modifier = Modifier) {
     Text(
@@ -166,6 +179,13 @@ fun Greeting(modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * A container component that manages the active recording timer and
+ * encompasses both the timer display and the recording control buttons.
+ * @param isRecording Boolean indicating if the app is currently recording.
+ * @param onRecordingChange Callback triggered when the recording state changes.
+ * @param modifier Modifier to be applied to the container.
+ */
 @Composable
 fun RecordingContainer(
     isRecording: Boolean,
@@ -221,6 +241,10 @@ fun RecordingContainer(
     }
 }
 
+/**
+ * Formats and displays the elapsed recording time.
+ * @param timeInMillis The raw elapsed time in milliseconds to be converted into MM:SS:ms format.
+ */
 @Composable
 fun RecordingTimer(timeInMillis: Long) {
     val hours = timeInMillis / 3600
@@ -237,6 +261,14 @@ fun RecordingTimer(timeInMillis: Long) {
     )
 }
 
+/**
+ * Represents a single row item in the audio logs list.
+ * Displays the file name, duration, and a dynamic Play/Stop button.
+ * @param record The AudioRecord data class containing file details.
+ * @param isPlaying Boolean indicating if this specific file is currently playing.
+ * @param onPlayClick Callback triggered when the user clicks Play.
+ * @param onStopClick Callback triggered when the user clicks Stop.
+ */
 @Composable
 fun AudioListItem(
     record: AudioRecord,
@@ -322,6 +354,15 @@ fun AudioListItem(
     }
 }
 
+/**
+ * Fetches and displays a vertically scrollable list of recorded audio files.
+ * Includes a custom, dynamically resizing and animated scrollbar.
+ * @param isRecording Boolean indicating if the app is actively recording (used to pause/refresh the list).
+ * @param currentlyPlayingFile The File object of the audio currently being played, or null.
+ * @param onPlayClick Callback triggered with the target File when a play button is clicked.
+ * @param onStopClick Callback triggered when the user stops audio playback.
+ * @param modifier Modifier to be applied to the list container.
+ */
 @Composable
 fun AudioLogs(
     isRecording: Boolean,
@@ -494,6 +535,12 @@ fun AudioLogs(
     }
 }
 
+/**
+ * Reads the application's cache directory, filters for .mp4 audio files,
+ * and extracts their metadata (duration) using MediaMetadataRetriever.
+ * @param context The application context required to access the file system.
+ * @return A list of AudioRecord objects sorted by last modified date (oldest to newest).
+ */
 fun fetchRecordings(context: Context): List<AudioRecord> {
     val directory = context.cacheDir
     val files = directory.listFiles()?.filter { it.extension == "mp4" } ?: emptyList()

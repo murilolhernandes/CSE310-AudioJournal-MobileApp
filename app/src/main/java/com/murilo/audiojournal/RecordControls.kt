@@ -32,6 +32,12 @@ import androidx.compose.ui.unit.sp
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 
+/**
+ * A layout container that aligns the Record and Stop buttons side-by-side.
+ * @param isRecording Boolean indicating if the app is actively recording.
+ * @param onRecordStart Callback triggered when the record button is successfully engaged.
+ * @param onStopClick Callback triggered when the stop button is clicked.
+ */
 @Composable
 fun RecordControls(
     isRecording: Boolean,
@@ -61,6 +67,12 @@ fun RecordControls(
     }
 }
 
+/**
+ * A UI button that handles Android runtime permissions for the microphone.
+ * Only triggers the recording sequence if permission is explicitly granted by the user.
+ * @param isRecording Boolean indicating if a recording is active (disables the button if true).
+ * @param onRecordStart Callback triggered after permissions are verified and the user intends to record.
+ */
 @Composable
 fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
     val context = LocalContext.current
@@ -116,6 +128,10 @@ fun RecordButton(isRecording: Boolean, onRecordStart: () -> Unit) {
     }
 }
 
+/**
+ * A simple UI button designed to trigger the stop recording sequence.
+ * @param onStopClick Callback triggered when the button is clicked.
+ */
 @Composable
 fun StopButton(onStopClick: () -> Unit) {
     Column(
