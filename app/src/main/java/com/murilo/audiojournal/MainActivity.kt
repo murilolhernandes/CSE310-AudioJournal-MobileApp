@@ -65,6 +65,9 @@ import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -197,6 +200,8 @@ fun RecordingContainer(
     val containerShape = RoundedCornerShape(12.dp)
     var timeInMillis by remember { mutableStateOf(0L) }
 
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(isRecording) {
         if (isRecording) {
             timeInMillis = 0L
@@ -227,14 +232,22 @@ fun RecordingContainer(
                     val fileName = "Journal_${System.currentTimeMillis()}.mp4"
                     val outputFile = File(context.cacheDir, fileName)
 
-                    audioRecorder.start(outputFile)
-
                     onRecordingChange(true)
+
+                    coroutineScope.launch(Dispatchers.IO) {
+                        audioRecorder.start(outputFile)
+                    }
                 },
                 onStopClick = {
-                    audioRecorder.stop()
-                    onRecordingChange(false)
-                    timeInMillis = 0L
+                    if (isRecording) {
+                        onRecordingChange(false)
+                        coroutineScope.launch(Dispatchers.IO) {
+                            audioRecorder.stop()
+                        }
+                    } else {
+                        timeInMillis = 0L
+                    }
+
                 }
             )
         }
@@ -247,11 +260,10 @@ fun RecordingContainer(
  */
 @Composable
 fun RecordingTimer(timeInMillis: Long) {
-    val hours = timeInMillis / 3600
     val minutes = (timeInMillis / 1000) / 60
     val seconds = (timeInMillis / 1000) % 60
-    val milliSeconds = (timeInMillis % 1000) / 10
-    val formattedTime = String.format("%02d:%02d:%02d", minutes, seconds, milliSeconds)
+    val centiseconds = (timeInMillis % 1000) / 10
+    val formattedTime = String.format("%02d:%02d.%02d", minutes, seconds, centiseconds)
 
     Text(
         text = formattedTime,
@@ -379,6 +391,7 @@ fun AudioLogs(
 
     LaunchedEffect(isRecording) {
         if (!isRecording) {
+            delay(500)
             recordings = fetchRecordings(context)
         }
     }
@@ -410,15 +423,8 @@ fun AudioLogs(
                         },
                         onStopClick = onStopClick,
                         onDelete = {
-                            //if (currentlyPlayingFile == record.file) {
-                              //  onStopClick()
-                            //}
                             recordToDelete = record
                             showDeleteDialog = true
-
-                            //record.file.delete()
-
-                            //recordings = fetchRecordings(context)
                         }
 
                     )
@@ -558,10 +564,11 @@ fun fetchRecordings(context: Context): List<AudioRecord> {
 
             val durationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
             val timeInMillis = durationString?.toLong() ?: 0L
+            val totalSeconds = Math.ceil(timeInMillis / 1000.0).toInt()
 
-            val hours = (timeInMillis / (1000 * 60 * 60)).toInt()
-            val minutes = (timeInMillis % (1000 * 60 * 60) / (1000 * 60)).toInt()
-            val seconds = (timeInMillis % (1000 * 60) / 1000).toInt()
+            val hours = totalSeconds / 3600
+            val minutes = (totalSeconds % 3600) / 60
+            val seconds = totalSeconds % 60
 
             formattedDuration = if (hours > 0) {
                 String.format("%02d:%02d:%02d", hours, minutes, seconds)
