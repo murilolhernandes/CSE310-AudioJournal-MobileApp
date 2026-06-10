@@ -7,7 +7,7 @@ AudioJournal is a fully functional, hardware-integrated Android application that
 I built this application to deepen my understanding of modern Android development using Kotlin and Jetpack Compose. Specifically, my goals were to master declarative UI design, state hoisting, runtime hardware permissions, and bridging the gap between frontend visuals and backend hardware engines (accessing the device's microphone and audio systems).
 
 ### Video Demonstration:
-[Software Demo Video - Project Walkthrough](http://youtube.link.goes.here)
+[Software Demo Video - Project Walkthrough](https://youtu.be/o6WtFHF08BQ)
 
 # Development Environment
 
